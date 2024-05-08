@@ -3,7 +3,7 @@ import httpStatus from 'http-status';
 
 const healthcheck = (req: Request, res: Response) => {
   res.status(httpStatus.OK);
-  res.send({ status: 'OK', data: new Date().toJSON() });
+  res.send({ status: 'RUNNING', data: new Date().toJSON() });
 };
 
 export default healthcheck;
