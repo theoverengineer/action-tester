@@ -1,15 +1,17 @@
-name: Deploy
+name: Release
 
 on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  release:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Get Next Version
         id: semver
