@@ -22,21 +22,21 @@ jobs:
         run: |
           echo "NEXT_VERSION=$(echo ${{ steps.semver.outputs.next }})" >> $GITHUB_ENV
           echo "NEXT_STRICT_VERSION=$(echo ${{ steps.semver.outputs.nextStrict }})" >> $GITHUB_ENV
-          echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.nextStrict }}')" >> $GITHUB_ENV
+          echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.next }}')" >> $GITHUB_ENV
 
       - name: Update version in package.json
         run: |
           tmp=$(mktemp)
-          jq --arg semver "${{steps.semver.outputs.nextStrict}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
+          jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{env.RELEASE_BRANCH}}
-          title: 'chore(release): ${steps.semver.outputs.next}'
-          body: 'Automated version bump to ${{steps.semver.outputs.next}}'
-          commit-message: 'chore(release): ${{steps.semver.outputs.next}}'
+          title: 'chore(release): ${{env.NEXT_VERSION}}'
+          body: 'Automated version bump to ${{env.NEXT_VERSION}}'
+          commit-message: 'chore(release): ${{env.NEXT_VERSION}}'
           committer: GitHub <noreply@github.com>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           labels: 'release-version'
