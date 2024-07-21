@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Get Next Version
         id: semver
@@ -20,13 +18,25 @@ jobs:
           token: ${{ github.token }}
           branch: main
 
-      - name: Create Release
-        uses: ncipollo/release-action@v1.14.0
+      - name: Store Next Version as Env Var
+        run: |
+          echo "NEXT_VERSION=$(echo ${{ steps.semver.outputs.next }})" >> $GITHUB_ENV
+          echo "NEXT_STRICT_VERSION=$(echo ${{ steps.semver.outputs.nextStrict }})" >> $GITHUB_ENV
+          echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.nextStrict }}')" >> $GITHUB_ENV
+
+      - name: Update version in package.json
+        run: |
+          tmp=$(mktemp)
+          jq --arg semver "${{steps.semver.outputs.nextStrict}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
         with:
-          allowUpdates: true
-          draft: false
-          makeLatest: true
-          name: ${{ steps.semver.outputs.next }}
-          body: Changelog Contents
-          token: ${{ github.token }}
-          commit: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{env.RELEASE_BRANCH}}
+          title: 'chore(release): ${steps.semver.outputs.next}'
+          body: 'Automated version bump to ${{steps.semver.outputs.next}}'
+          commit-message: 'chore(release): ${{steps.semver.outputs.next}}'
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          labels: 'release-version'
