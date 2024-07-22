@@ -20,23 +20,72 @@ jobs:
 
       - name: Store Next Version as Env Var
         run: |
+          echo "CURRENT_VERSION=$(echo ${{ steps.semver.outputs.current }})" >> $GITHUB_ENV
           echo "NEXT_VERSION=$(echo ${{ steps.semver.outputs.next }})" >> $GITHUB_ENV
           echo "NEXT_STRICT_VERSION=$(echo ${{ steps.semver.outputs.nextStrict }})" >> $GITHUB_ENV
           echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.next }}')" >> $GITHUB_ENV
+
+      - name: Create release branches
+        id: branches
+        run: |
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "current=$CURRENT_BRANCH"
+          echo "current=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
+
+          git push origin --delete $RELEASE_BRANCH || true
+          git branch -d $RELEASE_BRANCH || true
+
+          git branch $RELEASE_BRANCH
+          git checkout $RELEASE_BRANCH
+          git push -u origin $RELEASE_BRANCH
+
+          echo "release=$RELEASE_BRANCH"
+          echo "release=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Save release info
+        run: |
+          echo '{
+            "releaseVersion" : "${{env.NEXT_VERSION}}",
+            "developmentVersion": "${{env.CURRENT_VERSION}}",
+            "sourceBranch": "${{env.RELEASE_BRANCH}}"
+          }' > ./.github/config/release-info.json
 
       - name: Update version in package.json
         run: |
           tmp=$(mktemp)
           jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+      - name: Commit release-candidate
+        uses: EndBug/add-and-commit@v9
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{env.RELEASE_BRANCH}}
-          title: 'chore(release): ${{env.NEXT_VERSION}}'
-          body: 'Automated version bump to ${{env.NEXT_VERSION}}'
-          commit-message: 'chore(release): ${{env.NEXT_VERSION}}'
-          committer: GitHub <noreply@github.com>
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          labels: 'release-version'
+          author_name: ${{ github.actor }}
+          author_email: ${{ github.actor }}@users.noreply.github.com
+          message: 'Release version ${{env.NEXT_VERSION}}'
+          push: true
+          tag: v${{env.NEXT_VERSION}}
+          add: '["RELEASE.md", ".github/workflows/release.yaml", "package-lock.json", "package.json"]'
+
+      - name: Create Draft Release (with body)
+        if: hashFiles('RELEASE.md') != ''
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ env.API_ACCESS_TOKEN }}
+        with:
+          route: POST /repos/{owner}/{repo}/releases
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          tag_name: 'v${{env.NEXT_VERSION}}'
+          name: 'v${{env.NEXT_VERSION}}'
+          draft: true
+
+      - name: Create Release Candidate Pull Request
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ env.API_ACCESS_TOKEN }}
+        with:
+          route: POST /repos/{owner}/{repo}/pulls
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          head: ${{env.RELEASE_BRANCH}}
+          base: main
+          title: Release ${{env.NEXT_VERSION}}
