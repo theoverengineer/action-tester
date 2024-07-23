@@ -63,7 +63,18 @@ jobs:
           message: 'Release version ${{env.NEXT_VERSION}}'
           push: true
           tag: ${{env.NEXT_VERSION}}
-          add: '["RELEASE.md", ".github/workflows/release.yaml", "package-lock.json", "package.json"]'
+          add: '["RELEASE.md", ".github/config/release-info.json", ".github/workflows/release.yaml", "package-lock.json", "package.json"]'
+
+      - id: generate-release-notes
+        name: Generate Draft Release Notes
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          route: POST /repos/{owner}/{repo}/releases/generate-notes
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          tag_name: '${{env.NEXT_VERSION}}'
 
       - name: Create Draft Release (with body)
         uses: octokit/request-action@v2.x
@@ -76,6 +87,9 @@ jobs:
           tag_name: '${{env.NEXT_VERSION}}'
           name: '${{env.NEXT_VERSION}}'
           draft: true
+          body: |
+            |
+            ${{fromJson(steps.generate-release-notes.outputs.data).body}}
 
       - name: Create Release Candidate Pull Request
         uses: octokit/request-action@v2.x
