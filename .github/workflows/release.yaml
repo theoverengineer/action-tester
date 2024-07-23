@@ -66,7 +66,6 @@ jobs:
           add: '["RELEASE.md", ".github/workflows/release.yaml", "package-lock.json", "package.json"]'
 
       - name: Create Draft Release (with body)
-        if: hashFiles('RELEASE.md') != ''
         uses: octokit/request-action@v2.x
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
