@@ -46,6 +46,7 @@ jobs:
         run: |
           echo '{
             "releaseVersion" : "${{env.NEXT_VERSION}}",
+            "releaseVersionStrict" : "${{env.NEXT_STRICT_VERSION}}",
             "developmentVersion": "${{env.CURRENT_VERSION}}",
             "sourceBranch": "${{env.RELEASE_BRANCH}}"
           }' > ./.github/config/release-info.json
