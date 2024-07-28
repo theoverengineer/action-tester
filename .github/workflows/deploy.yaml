@@ -1,0 +1,68 @@
+name: Deploy To Dev
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'test'
+      dockerImageName:
+        description: 'Docker Image Name'
+        required: true
+      dockerImageTag:
+        description: 'Docker Image Tag'
+        required: true
+
+env:
+  CONTAINER_TAG: ${{inputs.dockerImageTag}}
+  CONTAINER_LABEL: ${{ inputs.dockerImageName }}
+  ENV_FILE: ${{vars.ENV_FILE_PATH}}
+  EXTERNAL_PORT: 3000
+
+jobs:
+  deploy-backend:
+    name: Deploy Docker Image
+    environment: ${{inputs.environment}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy NodeJS Container
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{vars.SSH_HOST}}
+          username: ${{ vars.SSH_USERNAME }}
+          key: ${{secrets.SSH_KEY}} # Private key of the server
+          script_stop: true
+
+          script: |
+            docker pull ${{ env.CONTAINER_TAG }}
+            docker ps -aq --filter "name=${{ env.CONTAINER_LABEL }}" | xargs -r docker rm -f
+            docker run -p ${{env.EXTERNAL_PORT}}:3000 --network=local_network --env-file ${{vars.ENV_FILE_PATH}} -d --name=${{ env.CONTAINER_LABEL }} ${{ env.CONTAINER_TAG }}
+
+  migrate-db:
+    name: Database Migrations
+    needs: deploy-backend
+    environment: ${{inputs.environment}}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup DigitalOcean Firewall
+        uses: earthpyy/setup-digitalocean-firewall@v1
+        with:
+          access-token: ${{ secrets.DO_TOKEN }}
+          firewall-id: ac019d3f-e127-4e47-99e3-7d6e23e8c7f7
+          ports: '3306/tcp'
+
+      - name: Set up Flyway CLIgit
+        run: |
+          docker pull flyway/flyway:10.16-alpine
+          docker run \
+            -v ./backend/migrations:/flyway/sql \
+            --rm flyway/flyway:10.16-alpine \
+            -url=jdbc:mysql://${{vars.DB_DOMAIN}}:${{vars.DB_PORT}}/${{vars.DB_SCHEMA}} \
+            -user=${{vars.DB_USER}} \
+            -password=${{secrets.DB_PASSWORD}} \
+            -locations=filesystem:/flyway/sql \
+            migrate
