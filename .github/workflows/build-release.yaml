@@ -230,39 +230,3 @@ jobs:
           propagate_failure: true
           trigger_workflow: true
           wait_workflow: false
-
-  release-upstream:
-    name: Release Upstream Repositories
-    runs-on: ubuntu-latest
-    needs: [package-backend]
-    env:
-      DEVELOPMENT_VERSION: ${{needs.deploy-to-artifactory.outputs.developmentVersion}}
-      RELEASE_VERSION: ${{needs.deploy-to-artifactory.outputs.releaseVersion}}
-      SOURCE_BRANCH: ${{needs.deploy-to-artifactory.outputs.sourceBranch}}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Trigger Downstream Release Workflows
-        env:
-          GITHUB_TOKEN: ${{ secrets.CFA_GITHUB_ACTIONS_ACCESS_TOKEN }}
-        run: |
-          MANIFEST_FILE=./.github/manifest.json
-
-          if test -f "$MANIFEST_FILE"; then
-            echo "Manifest file found at: $MANIFEST_FILE"
-
-            DISPATCH_URLS=$(jq --raw-output '.upstreamRepos[] | select(.autoRelease == true) | "https://api.github.com/repos/" + .owner + "/" + .repo + "/actions/workflows/release.yml/dispatches"' "$MANIFEST_FILE")
-
-            while IFS= read -r DISPATCH_URL; do
-              echo "Calling $DISPATCH_URL"
-              curl -X POST "$DISPATCH_URL" \
-                -H "Accept: application/vnd.github.v3+json" \
-                -H "Content-Type: application/json" \
-                -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-                --data "{ \"ref\":\"${SOURCE_BRANCH}\", \"inputs\": { \"releaseVersion\": \"${RELEASE_VERSION}\", \"developmentVersion\": \"${DEVELOPMENT_VERSION}\" }"
-
-            done <<<"$DISPATCH_URLS"
-          else
-            echo "No manifest file found at: $MANIFEST_FILE"
-          fi
