@@ -14,10 +14,11 @@ on:
         required: true
 
 env:
+  MIGRATIONS_DIR: './backend/migrations'
   CONTAINER_TAG: ${{inputs.dockerImageTag}}
   CONTAINER_LABEL: ${{ inputs.dockerImageName }}
   ENV_FILE: ${{vars.ENV_FILE_PATH}}
-  EXTERNAL_PORT: 3000
+  PORT: 8080
 
 jobs:
   deploy-backend:
@@ -28,15 +29,15 @@ jobs:
       - name: Deploy NodeJS Container
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{vars.SSH_HOST}}
-          username: ${{ vars.SSH_USERNAME }}
-          key: ${{secrets.SSH_KEY}} # Private key of the server
+          host: ${{vars.APP_SSH_HOST}}
+          username: ${{ vars.APP_SSH_USERNAME }}
+          key: ${{secrets.APP_SSH_KEY}} # Private key of the server
           script_stop: true
 
           script: |
             docker pull ${{ env.CONTAINER_TAG }}
             docker ps -aq --filter "name=${{ env.CONTAINER_LABEL }}" | xargs -r docker rm -f
-            docker run -p ${{env.EXTERNAL_PORT}}:3000 --network=local_network --env-file ${{vars.ENV_FILE_PATH}} -d --name=${{ env.CONTAINER_LABEL }} ${{ env.CONTAINER_TAG }}
+            docker run -p ${{env.PORT}}:${{env.PORT}} --network=local_network --env-file ${{env.ENV_FILE}} -d --name=${{ env.CONTAINER_LABEL }} ${{ env.CONTAINER_TAG }}
 
   migrate-db:
     name: Database Migrations
@@ -59,7 +60,7 @@ jobs:
         run: |
           docker pull flyway/flyway:10.16-alpine
           docker run \
-            -v ./backend/migrations:/flyway/sql \
+            -v ${{env.MIGRATIONS_DIR}}:/flyway/sql \
             --rm flyway/flyway:10.16-alpine \
             -url=jdbc:mysql://${{vars.DB_DOMAIN}}:${{vars.DB_PORT}}/${{vars.DB_SCHEMA}} \
             -user=${{vars.DB_USER}} \
