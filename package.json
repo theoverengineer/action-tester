@@ -1,6 +1,6 @@
 {
   "name": "net.ts",
-  "version": "1.1.5",
+  "version": "0.0.7",
   "description": "Node Express Template written in TypeScript NET.ts based on nodebestpractices",
   "main": "src/server.ts",
   "engines": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc && tsc-alias",
-    "server:prod": "node dist/server.js",
+    "server:prod": "node --env-file=.env dist/server.js",
     "server:dev": "ts-node-dev --inspect=0.0.0.0:9229 --exit-child --respawn -r tsconfig-paths/register src/server.ts",
     "test": "jest -c jest.config.js --env=node",
     "test:cov": "jest -c jest.config.js --coverage --env=node",
@@ -71,7 +71,7 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-security": "^1.4.0",
-    "prettier": "^2.5.1",
+    "prettier": "^3.3.3",
     "ts-node-dev": "^1.1.8",
     "tsc-alias": "^1.5.0",
     "tsconfig-paths": "^3.12.0"
