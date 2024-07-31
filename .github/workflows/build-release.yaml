@@ -1,0 +1,166 @@
+name: Build Release
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths-ignore:
+      - 'documentation/**'
+
+env:
+  RELEASE_DEPLOY_ENVIRONMENT: 'test'
+  RELEASE_CONTAINER_FULL_NAME: ghcr.io/${{ github.repository }}
+  RELEASE_CONTAINER_LABEL: ${{ github.event.repository.name }}
+  EXTERNAL_PORT: 3000
+
+  # CONTAINER_TAG: ghcr.io/${{ github.repository }}-dev:latest
+  # CONTAINER_LABEL: ${{ github.event.repository.name }}-dev
+
+concurrency:
+  group: build-release-${{github.ref}}
+  cancel-in-progress: false
+
+jobs:
+  # build-backend:
+  #   name: Build
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v4
+
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+
+  #     - name: Install Dependencies
+  #       working-directory: backend
+  #       run: npm ci
+
+  #     - name: Build Project
+  #       working-directory: backend
+  #       run: npm run build --if-present
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: dist
+  #         path: dist/
+
+  package-docker-image:
+    name: Package Docker Image
+    runs-on: ubuntu-latest
+
+    # CONTAINER_TAG: ghcr.io/${{ github.repository }}-dev:latest
+    # CONTAINER_LABEL: ${{ github.event.repository.name }}-dev
+
+    outputs:
+      releaseVersion: ${{steps.release-info.outputs.releaseVersion}}
+      releaseVersionStrict: ${{steps.release-info.outputs.releaseVersionStrict}}
+      developmentVersion: ${{steps.release-info.outputs.developmentVersion}}
+      sourceBranch: ${{steps.release-info.outputs.sourceBranch}}
+      dockerContainerLabel: ${{ github.event.repository.name }}
+      releaseDockerImage: ghcr.io/${{ github.repository }}:${{steps.release-info.outputs.releaseVersionStrict}}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get release info
+        id: release-info
+        run: |
+          RELEASE_VERSION=$(jq -r '.releaseVersion' ./.github/config/release-info.json)
+          echo "releaseVersion=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+          echo "releaseVersion=$RELEASE_VERSION"
+
+          RELEASE_VERSION_STRICT=$(jq -r '.releaseVersionStrict' ./.github/config/release-info.json)
+          echo "releaseVersionStrict=$RELEASE_VERSION_STRICT" >> $GITHUB_OUTPUT
+          echo "releaseVersionStrict=$RELEASE_VERSION_STRICT"
+
+          DEVELOPMENT_VERSION=$(jq -r '.developmentVersion' ./.github/config/release-info.json)
+          echo "developmentVersion=$DEVELOPMENT_VERSION" >> $GITHUB_OUTPUT
+          echo "developmentVersion=$DEVELOPMENT_VERSION"
+
+          SOURCE_BRANCH=$(jq -r '.sourceBranch' ./.github/config/release-info.json)
+          echo "sourceBranch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
+          echo "sourceBranch=$SOURCE_BRANCH"
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          file: ./Dockerfile
+          context: .
+          push: true
+          tags: '${{ env.RELEASE_CONTAINER_FULL_NAME }}:${{ steps.release-info.outputs.releaseVersionStrict}}'
+
+  publish-release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [package-docker-image]
+    env:
+      RELEASE_VERSION: ${{needs.deploy-to-artifactory.outputs.releaseVersion}}
+    steps:
+      - name: Get Releases
+        uses: kaliber5/action-get-release@v1
+        id: get-release
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          tag_name: '${{env.RELEASE_VERSION}}'
+          draft: true
+
+      - name: Publish Release
+        uses: octokit/request-action@v2.x
+        id: publish-release
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          route: PATCH /repos/{owner}/{repo}/releases/{release_id}
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          release_id: ${{steps.get-release.outputs.id}}
+          draft: false
+
+  deploy:
+    name: Deploy Docker image
+    runs-on: ubuntu-latest
+    needs: [package-docker-image]
+    steps:
+      - name: Trigger Deploy Workflow
+        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow_file_name: deploy.yml
+          ref: ${{github.ref}}
+          wait_interval: 1
+          client_payload: |
+            {
+              "dockerContainerName": "${{needs.package-docker-image.outputs.dockerContainerLabel}}",
+              "dockerImageTag": "${{needs.package-docker-image.outputs.releaseDockerImage}}",
+              "environment": "${{ env.RELEASE_DEPLOY_ENVIRONMENT }}"
+            }
+          propagate_failure: true
+          trigger_workflow: true
+          wait_workflow: false
