@@ -17,6 +17,7 @@ jobs:
         with:
           token: ${{ github.token }}
           skipInvalidTags: true
+          patchList: fix, bugfix, perf, refactor, test, tests, release
           branch: main
 
       - name: Store Next Version as Env Var
