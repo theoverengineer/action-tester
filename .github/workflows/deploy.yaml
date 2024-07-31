@@ -16,7 +16,7 @@ on:
 env:
   MIGRATIONS_DIR: './backend/migrations'
   CONTAINER_TAG: ${{ inputs.dockerImageTag }}
-  CONTAINER_LABEL: ${{ inputs.dockerImageName }}
+  CONTAINER_LABEL: ${{ inputs.dockerContainerName }}
   ENV_FILE: ${{ vars.ENV_FILE_PATH }}
   PACKAGE_REPO_USERNAME: speedymorales
   PORT: 8080
@@ -28,13 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy NodeJS Container
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{vars.APP_SSH_HOST}}
           username: ${{ vars.APP_SSH_USERNAME }}
           key: ${{secrets.APP_SSH_KEY}} # Private key of the server
           script_stop: true
-
           script: |
             echo ${{secrets.GHCR_IO_TOKEN}} | docker login ghcr.io -u ${{env.PACKAGE_REPO_USERNAME}} --password-stdin
             docker pull ${{ env.CONTAINER_TAG }}
