@@ -64,7 +64,7 @@ jobs:
           message: 'Release version ${{env.NEXT_VERSION}}'
           push: true
           tag: ${{env.NEXT_VERSION}}
-          add: '["RELEASE.md", ".github/config/release-info.json", ".github/workflows/release.yaml", "package-lock.json", "package.json"]'
+          add: '["RELEASE.md", ".github/config/release-info.json", "package-lock.json", "package.json"]'
 
       - name: Generate Draft Release Notes
         id: generate-release-notes
