@@ -45,9 +45,6 @@ jobs:
     name: Package Docker Image
     runs-on: ubuntu-latest
 
-    # CONTAINER_TAG: ghcr.io/${{ github.repository }}-dev:latest
-    # CONTAINER_LABEL: ${{ github.event.repository.name }}-dev
-
     outputs:
       releaseVersion: ${{steps.release-info.outputs.releaseVersion}}
       releaseVersionStrict: ${{steps.release-info.outputs.releaseVersionStrict}}
@@ -95,7 +92,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           file: ./Dockerfile
           context: .
