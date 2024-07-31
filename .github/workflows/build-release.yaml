@@ -87,13 +87,13 @@ jobs:
           echo "sourceBranch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
           echo "sourceBranch=$SOURCE_BRANCH"
 
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      # - name: Checkout Code
+      #   uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      # - uses: actions/download-artifact@v4
+      #   with:
+      #     name: dist
+      #     path: dist/
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
