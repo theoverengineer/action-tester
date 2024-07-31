@@ -18,6 +18,7 @@ env:
   CONTAINER_TAG: ${{ inputs.dockerImageTag }}
   CONTAINER_LABEL: ${{ inputs.dockerImageName }}
   ENV_FILE: ${{ vars.ENV_FILE_PATH }}
+  PACKAGE_REPO_USERNAME: speedymorales
   PORT: 8080
 
 jobs:
@@ -35,6 +36,7 @@ jobs:
           script_stop: true
 
           script: |
+            echo ${{secrets.GHCR_IO_TOKEN}} | docker login ghcr.io -u ${{env.PACKAGE_REPO_USERNAME}} --password-stdin
             docker pull ${{ env.CONTAINER_TAG }}
             docker ps -aq --filter "name=${{ env.CONTAINER_LABEL }}" | xargs -r docker rm -f
             docker run -p ${{env.PORT}}:${{env.PORT}} --network=local_network --env-file ${{env.ENV_FILE}} -d --name=${{ env.CONTAINER_LABEL }} ${{ env.CONTAINER_TAG }}
