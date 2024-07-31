@@ -25,7 +25,7 @@ jobs:
           echo "NEXT_STRICT_VERSION=$(echo ${{ steps.semver.outputs.nextStrict }})" >> $GITHUB_ENV
           echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.next }}')" >> $GITHUB_ENV
 
-      - name: Create release branches
+      - name: Create Release Branches
         id: branches
         run: |
           CURRENT_BRANCH=$(git branch --show-current)
@@ -42,7 +42,7 @@ jobs:
           echo "release=$RELEASE_BRANCH"
           echo "release=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
 
-      - name: Save release info
+      - name: Save Release Info
         run: |
           echo '{
             "releaseVersion" : "${{env.NEXT_VERSION}}",
@@ -51,12 +51,12 @@ jobs:
             "sourceBranch": "${{env.RELEASE_BRANCH}}"
           }' > ./.github/config/release-info.json
 
-      - name: Update version in package.json
+      - name: Update Version In package.json
         run: |
           tmp=$(mktemp)
           jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
 
-      - name: Commit release-candidate
+      - name: Commit Release Candidate
         uses: EndBug/add-and-commit@v9
         with:
           author_name: ${{ github.actor }}
@@ -66,8 +66,8 @@ jobs:
           tag: ${{env.NEXT_VERSION}}
           add: '["RELEASE.md", ".github/config/release-info.json", ".github/workflows/release.yaml", "package-lock.json", "package.json"]'
 
-      - id: generate-release-notes
-        name: Generate Draft Release Notes
+      - name: Generate Draft Release Notes
+        id: generate-release-notes
         uses: octokit/request-action@v2.x
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,7 +77,7 @@ jobs:
           repo: ${{github.event.repository.name}}
           tag_name: '${{env.NEXT_VERSION}}'
 
-      - name: Create Draft Release (with body)
+      - name: Create Draft Release
         uses: octokit/request-action@v2.x
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

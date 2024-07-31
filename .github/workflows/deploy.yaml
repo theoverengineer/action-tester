@@ -1,4 +1,4 @@
-name: Deploy To Dev
+name: Deploy
 on:
   workflow_dispatch:
     inputs:
@@ -6,18 +6,18 @@ on:
         description: 'Environment'
         required: true
         default: 'test'
-      dockerImageName:
-        description: 'Docker Image Name'
+      dockerContainerName:
+        description: 'Docker Container Name'
         required: true
       dockerImageTag:
-        description: 'Docker Image Tag'
+        description: 'Docker Image and Tag'
         required: true
 
 env:
   MIGRATIONS_DIR: './backend/migrations'
-  CONTAINER_TAG: ${{inputs.dockerImageTag}}
+  CONTAINER_TAG: ${{ inputs.dockerImageTag }}
   CONTAINER_LABEL: ${{ inputs.dockerImageName }}
-  ENV_FILE: ${{vars.ENV_FILE_PATH}}
+  ENV_FILE: ${{ vars.ENV_FILE_PATH }}
   PORT: 8080
 
 jobs:
@@ -56,7 +56,7 @@ jobs:
           firewall-id: ac019d3f-e127-4e47-99e3-7d6e23e8c7f7
           ports: '3306/tcp'
 
-      - name: Set up Flyway CLIgit
+      - name: Set up Flyway CLI
         run: |
           docker pull flyway/flyway:10.16-alpine
           docker run \

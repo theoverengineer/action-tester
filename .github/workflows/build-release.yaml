@@ -8,11 +8,7 @@ on:
       - 'documentation/**'
 
 env:
-  SERVER_PROJECT: '*server'
-  RELEASE_DEPLOY: true
   RELEASE_DEPLOY_ENVIRONMENT: 'test'
-  DOCKER_DEPLOY_DIRECTORY: './deploy'
-
   RELEASE_CONTAINER_FULL_NAME: ghcr.io/${{ github.repository }}
   RELEASE_CONTAINER_LABEL: ${{ github.event.repository.name }}
   EXTERNAL_PORT: 3000
@@ -25,107 +21,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # deploy-docker-image:
-  #   name: Deploy Docker Image
+  # build-backend:
+  #   name: Build
   #   runs-on: ubuntu-latest
 
-  #   outputs:
-  #     releaseVersion: ${{steps.release-info.outputs.releaseVersion}}
-  #     developmentVersion: ${{steps.release-info.outputs.developmentVersion}}
-  #     sourceBranch: ${{steps.release-info.outputs.sourceBranch}}
-  #     releaseDockerImage: cfa-docker.jfrog.io/${{ steps.get_artifact.outputs.name }}
-  #     releaseDockerTag: ${{ steps.get_artifact.outputs.version }}-${{ steps.get_short_sha.outputs.shortSha }}
-
   #   steps:
-  #     - name: Checkout
+  #     - name: Checkout Code
   #       uses: actions/checkout@v4
+
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v4
   #       with:
-  #         fetch-depth: 0
+  #         node-version: 20
 
-  #     - name: Get release info
-  #       id: release-info
-  #       run: |
-  #         RELEASE_VERSION=$(jq -r '.releaseVersion' ./.github/config/release-info.json)
-  #         echo "releaseVersion=$RELEASE_VERSION" >> $GITHUB_OUTPUT
-  #         echo "releaseVersion=$RELEASE_VERSION"
+  #     - name: Install Dependencies
+  #       working-directory: backend
+  #       run: npm ci
 
-  #         DEVELOPMENT_VERSION=$(jq -r '.developmentVersion' ./.github/config/release-info.json)
-  #         echo "developmentVersion=$DEVELOPMENT_VERSION" >> $GITHUB_OUTPUT
-  #         echo "developmentVersion=$DEVELOPMENT_VERSION"
+  #     - name: Build Project
+  #       working-directory: backend
+  #       run: npm run build --if-present
 
-  #         SOURCE_BRANCH=$(jq -r '.sourceBranch' ./.github/config/release-info.json)
-  #         echo "sourceBranch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
-  #         echo "sourceBranch=$SOURCE_BRANCH"
-
-  #     - name: Setup Artifactory (maven)
-  #       uses: approved-3rd-party-actions/maven-settings-xml-action@v22
+  #     - uses: actions/upload-artifact@v4
   #       with:
-  #         repositories: '[{ "id": "releases", "name": "maven", "url": "https://cfa.jfrog.io/cfa/maven", "releases": { "enabled": "true" }, "snapshots": { "enabled": "false" } },{ "id": "snapshots", "name": "maven", "url": "https://cfa.jfrog.io/cfa/maven", "releases": { "enabled": "false" }, "snapshots": { "enabled": "true" }}]'
-  #         plugin_repositories: '[{ "id": "releases", "name": "maven", "url": "https://cfa.jfrog.io/cfa/maven", "releases": { "enabled": "true" }, "snapshots": { "enabled": "false" } },{ "id": "snapshots", "name": "maven", "url": "https://cfa.jfrog.io/cfa/maven", "releases": { "enabled": "false" }, "snapshots": { "enabled": "true" }}]'
-  #         servers: '[{ "id": "releases", "username": "${ARTIFACTORY_USER}", "password": "${ARTIFACTORY_TOKEN}" },{ "id": "snapshots", "username": "${ARTIFACTORY_USER}", "password": "${ARTIFACTORY_TOKEN}" }]'
-
-  #     - name: Setup Artifactory (npm)
-  #       run: |
-  #         npm config set registry https://cfa.jfrog.io/cfa/api/npm/npm/
-  #         npm config set //cfa.jfrog.io/cfa/api/npm/npm/:_auth $(echo ${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} | base64 -w 0)
-
-  #     - name: Cache Maven Repository
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: |
-  #           ~/.m2/repository
-  #           !~/.m2/repository/**/*SNAPSHOT*
-  #         key: ${{ runner.os }}-m2-repository-${{ hashFiles('**/pom.xml') }}
-  #         restore-keys: ${{ runner.os }}-m2-repository-
-
-  #     - name: Get Maven artifact
-  #       id: get_artifact
-  #       working-directory: '${{ env.MAVEN_DIRECTORY }}'
-  #       run: |
-  #         FINAL_NAME=$( cd ${SERVER_PROJECT}; mvn help:evaluate -Dexpression=project.build.finalName -q -DforceStdout )
-  #         NAME=$( cd ${SERVER_PROJECT}; mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout )
-  #         VERSION=$( cd ${SERVER_PROJECT}; mvn help:evaluate -Dexpression=project.version -q -DforceStdout )
-  #         echo "final_name=$FINAL_NAME" >> $GITHUB_OUTPUT
-  #         echo "name=$NAME" >> $GITHUB_OUTPUT
-  #         echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-  build-backend:
-    name: Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install Dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Build Project
-        working-directory: backend
-        run: npm run build --if-present
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: be-dist
-          path: backend/dist/
+  #         name: dist
+  #         path: dist/
 
   package-docker-image:
     name: Package Docker Image
     runs-on: ubuntu-latest
-    needs: build-backend
+
+    # CONTAINER_TAG: ghcr.io/${{ github.repository }}-dev:latest
+    # CONTAINER_LABEL: ${{ github.event.repository.name }}-dev
 
     outputs:
       releaseVersion: ${{steps.release-info.outputs.releaseVersion}}
+      releaseVersionStrict: ${{steps.release-info.outputs.releaseVersionStrict}}
       developmentVersion: ${{steps.release-info.outputs.developmentVersion}}
       sourceBranch: ${{steps.release-info.outputs.sourceBranch}}
-      releaseDockerImage: ghcr.io/${{ github.repository }} cfa-docker.jfrog.io/${{ steps.get_artifact.outputs.name }}
-      releaseDockerTag: ${{ steps.get_artifact.outputs.version }}-${{ steps.get_short_sha.outputs.shortSha }}
+      dockerContainerLabel: ${{ github.event.repository.name }}
+      releaseDockerImage: ghcr.io/${{ github.repository }}:${{steps.release-info.outputs.releaseVersionStrict}}
 
     steps:
       - name: Checkout
@@ -157,8 +92,8 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: be-dist
-          path: backend/dist/
+          name: dist
+          path: dist/
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -170,8 +105,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          file: backend/Dockerfile
-          context: ./backend
+          file: ./Dockerfile
+          context: .
           push: true
           tags: '${{ env.RELEASE_CONTAINER_FULL_NAME }}:${{ steps.release-info.outputs.releaseVersionStrict}}'
 
@@ -216,16 +151,15 @@ jobs:
         with:
           owner: ${{github.repository_owner}}
           repo: ${{github.event.repository.name}}
-          github_token: ${{ secrets.CFA_GITHUB_ACTIONS_ACCESS_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow_file_name: deploy.yml
           ref: ${{github.ref}}
           wait_interval: 1
           client_payload: |
             {
-              "dockerImageName": "${{needs.deploy-to-artifactory.outputs.releaseDockerImage}}",
-              "dockerImageTag": "${{needs.deploy-to-artifactory.outputs.releaseDockerTag}}",
-              "environment": "${{ env.RELEASE_DEPLOY_ENVIRONMENT }}",
-              "createPR": "false"
+              "dockerContainerName": "${{needs.package-docker-image.outputs.dockerContainerLabel}}",
+              "dockerImageTag": "${{needs.package-docker-image.outputs.releaseDockerImage}}",
+              "environment": "${{ env.RELEASE_DEPLOY_ENVIRONMENT }}"
             }
           propagate_failure: true
           trigger_workflow: true
