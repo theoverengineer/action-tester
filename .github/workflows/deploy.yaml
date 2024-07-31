@@ -3,9 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       environment:
+        type: choice
         description: 'Environment'
+        options:
+          - dev
+          - test
+          - prod
         required: true
-        default: 'test'
       dockerContainerName:
         description: 'Docker Container Name'
         required: true
