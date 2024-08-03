@@ -28,4 +28,4 @@ jobs:
           key: ${{env.PRIVATE_KEY}} # Private key of the server
           script_stop: true
           script: |
-            touch action-file.txt
+            echo "some contents" > action-file.txt
