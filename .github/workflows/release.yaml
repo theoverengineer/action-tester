@@ -16,8 +16,7 @@ jobs:
         uses: speedymorales/semver-action@main
         with:
           token: ${{ github.token }}
-          skipInvalidTags: true
-          branch: main
+          branch: develop
 
       - name: Store Next Version as Env Var
         run: |
