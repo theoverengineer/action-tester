@@ -11,16 +11,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Rebase From Main Branches
-        run: |
-          git pull --rebase origin main
-
       - name: Get Next Version
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
-          branch: main
+          branch: develop
 
       - name: Store Next Version as Env Var
         run: |
