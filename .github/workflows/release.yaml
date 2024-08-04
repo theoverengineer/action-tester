@@ -11,12 +11,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Rebase From Main Branches
+        run: |
+          git pull --rebase origin main
+
       - name: Get Next Version
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
-          skipInvalidTags: true
           branch: main
 
       - name: Store Next Version as Env Var
@@ -36,7 +39,6 @@ jobs:
           git push origin --delete $RELEASE_BRANCH || true
           git branch -d $RELEASE_BRANCH || true
 
-          git pull --rebase origin main
           git branch $RELEASE_BRANCH
           git checkout $RELEASE_BRANCH
           git push -u origin $RELEASE_BRANCH
