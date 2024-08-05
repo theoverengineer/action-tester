@@ -13,7 +13,7 @@ jobs:
 
       - name: Get Next Version
         id: semver
-        uses: speedymorales/semver-action@main
+        uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
           branch: develop
