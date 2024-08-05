@@ -38,6 +38,10 @@ jobs:
           git branch $RELEASE_BRANCH
           git checkout $RELEASE_BRANCH
           git push -u origin $RELEASE_BRANCH
+          
+          git pull --rebase origin main
+          git pull --no-edit
+          git push
 
       - name: Save Release Info
         run: |
