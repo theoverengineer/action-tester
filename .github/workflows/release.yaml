@@ -60,7 +60,7 @@ jobs:
           git pull
 
           git checkout $RELEASE_BRANCH
-          git merge --strategy-option=ours main
+          git merge --strategy-option=ours --allow-unrelated-histories main
           git push
 
       - name: Commit Release Candidate
