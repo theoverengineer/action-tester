@@ -53,8 +53,6 @@ jobs:
           tmp=$(mktemp)
           jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
       
-      
-
       - name: Commit Release Candidate
         uses: EndBug/add-and-commit@v9
         with:
