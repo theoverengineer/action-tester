@@ -39,8 +39,7 @@ jobs:
           git checkout $RELEASE_BRANCH
           git push -u origin $RELEASE_BRANCH
           
-          git pull --rebase origin main
-          git pull --no-edit
+          git merge --strategy-option=ours main
           git push
 
       - name: Save Release Info
