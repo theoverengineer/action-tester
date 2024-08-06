@@ -38,9 +38,6 @@ jobs:
           git branch $RELEASE_BRANCH
           git checkout $RELEASE_BRANCH
           git push -u origin $RELEASE_BRANCH
-          
-          git merge --strategy-option=ours main
-          git push
 
       - name: Save Release Info
         run: |
@@ -55,6 +52,16 @@ jobs:
         run: |
           tmp=$(mktemp)
           jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
+      
+      - name: Fix any merge issues
+        run: |
+          git fetch
+          git checkout main
+          git pull
+
+          git checkout $RELEASE_BRANCH
+          git merge --strategy-option=ours main
+          git push
 
       - name: Commit Release Candidate
         uses: EndBug/add-and-commit@v9
