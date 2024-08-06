@@ -13,7 +13,7 @@ jobs:
 
       - name: Get Next Version
         id: semver
-        uses: speedymorales/semver-action@main
+        uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
           branch: develop
@@ -52,7 +52,7 @@ jobs:
         run: |
           tmp=$(mktemp)
           jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
-
+      
       - name: Commit Release Candidate
         uses: EndBug/add-and-commit@v9
         with:
@@ -61,7 +61,17 @@ jobs:
           message: 'Release version ${{env.NEXT_VERSION}}'
           push: true
           tag: ${{env.NEXT_VERSION}}
-          add: '["RELEASE.md", ".github/config/release-info.json", "package-lock.json", "package.json"]'
+          add: '[".github/config/release-info.json", "package-lock.json", "package.json"]'
+
+      - name: Fix Merge Issues
+        run: |
+          git fetch
+          git checkout main
+          git pull
+
+          git checkout $RELEASE_BRANCH
+          git merge --strategy-option=ours --allow-unrelated-histories main
+          git push
 
       - name: Generate Draft Release Notes
         id: generate-release-notes
