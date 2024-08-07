@@ -1,6 +1,6 @@
 {
-  "releaseVersion" : "v0.0.16",
-  "releaseVersionStrict" : "0.0.16",
-  "developmentVersion": "v0.0.15",
-  "sourceBranch": "release/v0.0.16"
+  "releaseVersion" : "v0.1.0",
+  "releaseVersionStrict" : "0.1.0",
+  "developmentVersion": "v0.0.16",
+  "sourceBranch": "release/v0.1.0"
 }
