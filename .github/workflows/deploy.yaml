@@ -21,6 +21,7 @@ env:
   MIGRATIONS_DIR: './backend/migrations'
   CONTAINER_TAG: ${{ inputs.dockerImageTag }}
   CONTAINER_LABEL: ${{ inputs.dockerContainerName }}
+  FLYWAY_CONTAINER_VERSION: 10.17-alpine
   ENV_FILE: ${{ vars.ENV_FILE_PATH }}
   PACKAGE_REPO_USERNAME: speedymorales
   PORT: 8080
@@ -62,12 +63,11 @@ jobs:
           firewall-id: ac019d3f-e127-4e47-99e3-7d6e23e8c7f7
           ports: '3306/tcp'
 
-      - name: Set up Flyway CLI
+      - name: Run Flyway CLI
         run: |
-          docker pull flyway/flyway:10.16-alpine
           docker run \
             -v ${{env.MIGRATIONS_DIR}}:/flyway/sql \
-            --rm flyway/flyway:10.16-alpine \
+            --rm flyway/flyway:${{env.FLYWAY_CONTAINER_VERSION}} \
             -url=jdbc:mysql://${{vars.DB_DOMAIN}}:${{vars.DB_PORT}}/${{vars.DB_SCHEMA}} \
             -user=${{vars.DB_USER}} \
             -password=${{secrets.DB_PASSWORD}} \
