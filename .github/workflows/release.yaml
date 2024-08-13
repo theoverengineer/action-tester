@@ -1,0 +1,112 @@
+name: Release PR
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Get Next Version
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: develop
+
+      - name: Store Next Version as Env Var
+        run: |
+          echo "CURRENT_VERSION=$(echo ${{ steps.semver.outputs.current }})" >> $GITHUB_ENV
+          echo "NEXT_VERSION=$(echo ${{ steps.semver.outputs.next }})" >> $GITHUB_ENV
+          echo "NEXT_STRICT_VERSION=$(echo ${{ steps.semver.outputs.nextStrict }})" >> $GITHUB_ENV
+          echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.next }}')" >> $GITHUB_ENV
+
+      - name: Create Release Branches
+        id: branches
+        run: |
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "current=$CURRENT_BRANCH"
+          echo "current=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
+
+          git push origin --delete $RELEASE_BRANCH || true
+          git branch -d $RELEASE_BRANCH || true
+
+          git branch $RELEASE_BRANCH
+          git checkout $RELEASE_BRANCH
+          git push -u origin $RELEASE_BRANCH
+
+      - name: Save Release Info
+        run: |
+          echo '{
+            "releaseVersion" : "${{env.NEXT_VERSION}}",
+            "releaseVersionStrict" : "${{env.NEXT_STRICT_VERSION}}",
+            "developmentVersion": "${{env.CURRENT_VERSION}}",
+            "sourceBranch": "${{env.RELEASE_BRANCH}}"
+          }' > ./.github/config/release-info.json
+
+      - name: Update Version In package.json
+        run: |
+          tmp=$(mktemp)
+          jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
+      
+      - name: Commit Release Candidate
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: ${{ github.actor }}
+          author_email: ${{ github.actor }}@users.noreply.github.com
+          message: 'Release version ${{env.NEXT_VERSION}}'
+          push: true
+          tag: ${{env.NEXT_VERSION}}
+          add: '[".github/config/release-info.json", "package-lock.json", "package.json"]'
+
+      - name: Fix Merge Issues
+        run: |
+          git fetch
+          git checkout main
+          git pull
+
+          git checkout $RELEASE_BRANCH
+          git merge --strategy-option=ours --allow-unrelated-histories main
+          git push
+
+      - name: Generate Draft Release Notes
+        id: generate-release-notes
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          route: POST /repos/{owner}/{repo}/releases/generate-notes
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          tag_name: '${{env.NEXT_VERSION}}'
+
+      - name: Create Draft Release
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          route: POST /repos/{owner}/{repo}/releases
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          tag_name: '${{env.NEXT_VERSION}}'
+          name: '${{env.NEXT_VERSION}}'
+          draft: true
+          body: |
+            |
+            ${{fromJson(steps.generate-release-notes.outputs.data).body}}
+
+      - name: Create Release Candidate Pull Request
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          route: POST /repos/{owner}/{repo}/pulls
+          owner: ${{github.repository_owner}}
+          repo: ${{github.event.repository.name}}
+          head: ${{env.RELEASE_BRANCH}}
+          base: main
+          title: Release ${{env.NEXT_VERSION}}
