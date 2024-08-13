@@ -20,7 +20,6 @@ jobs:
 
       - name: Store Next Version as Env Var
         run: |
-          echo "CURRENT_VERSION=$(echo ${{ steps.semver.outputs.current }})" >> $GITHUB_ENV
           echo "NEXT_VERSION=$(echo ${{ steps.semver.outputs.next }})" >> $GITHUB_ENV
           echo "NEXT_STRICT_VERSION=$(echo ${{ steps.semver.outputs.nextStrict }})" >> $GITHUB_ENV
           echo "RELEASE_BRANCH=$(echo 'release/${{ steps.semver.outputs.next }}')" >> $GITHUB_ENV
@@ -39,20 +38,11 @@ jobs:
           git checkout $RELEASE_BRANCH
           git push -u origin $RELEASE_BRANCH
 
-      - name: Save Release Info
-        run: |
-          echo '{
-            "releaseVersion" : "${{env.NEXT_VERSION}}",
-            "releaseVersionStrict" : "${{env.NEXT_STRICT_VERSION}}",
-            "developmentVersion": "${{env.CURRENT_VERSION}}",
-            "sourceBranch": "${{env.RELEASE_BRANCH}}"
-          }' > ./.github/config/release-info.json
-
       - name: Update Version In package.json
         run: |
           tmp=$(mktemp)
           jq --arg semver "${{env.NEXT_STRICT_VERSION}}" '.version=$semver' package.json > "$tmp" && mv "$tmp" package.json
-      
+
       - name: Commit Release Candidate
         uses: EndBug/add-and-commit@v9
         with:
@@ -61,7 +51,7 @@ jobs:
           message: 'Release version ${{env.NEXT_VERSION}}'
           push: true
           tag: ${{env.NEXT_VERSION}}
-          add: '[".github/config/release-info.json", "package-lock.json", "package.json"]'
+          add: '["package-lock.json", "package.json"]'
 
       - name: Fix Merge Issues
         run: |

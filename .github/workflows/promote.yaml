@@ -20,11 +20,11 @@ jobs:
       - name: Get Release Version
         id: release-info
         run: |
-          RELEASE_VERSION=$(jq -r '.releaseVersion' ./.github/config/release-info.json)
+          RELEASE_VERSION=v$(jq -r '.version' ./package.json)
           echo "releaseVersion=$RELEASE_VERSION" >> $GITHUB_OUTPUT
           echo "releaseVersion=$RELEASE_VERSION"
 
-          RELEASE_VERSION_STRICT=$(jq -r '.releaseVersionStrict' ./.github/config/release-info.json)
+          RELEASE_VERSION_STRICT=$(jq -r '.version' ./package.json)
           echo "releaseVersionStrict=$RELEASE_VERSION_STRICT" >> $GITHUB_OUTPUT
           echo "releaseVersionStrict=$RELEASE_VERSION_STRICT"
 
