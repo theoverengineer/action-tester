@@ -1,5 +1,5 @@
-import Joi from 'joi';
 import { readPackage } from '@core/utils/package';
+import Joi from 'joi';
 
 // All env variables used by the app should be defined in this file.
 
@@ -13,7 +13,7 @@ import { readPackage } from '@core/utils/package';
 const envsSchema = Joi.object()
   .keys({
     NODE_ENV: Joi.string()
-      .valid('production', 'integration', 'development')
+      .valid('production', 'integration', 'development', 'test')
       .required(),
     PORT: Joi.number().default(8080),
     API_KEY_TOKEN: Joi.string().required(),
