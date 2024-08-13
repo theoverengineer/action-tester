@@ -17,6 +17,9 @@ jobs:
     name: Deploy Docker image
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Get Release Version
         id: release-info
         run: |
