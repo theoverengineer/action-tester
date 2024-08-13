@@ -3,7 +3,6 @@ import js from '@eslint/js';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import jest from 'eslint-plugin-jest';
-import security from 'eslint-plugin-security';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,7 +25,6 @@ export default [
     plugins: {
       '@typescript-eslint': typescriptEslint,
       jest,
-      security,
     },
 
     languageOptions: {
