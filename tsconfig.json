@@ -20,6 +20,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "importHelpers": true,
+    "ignoreDeprecations": "5.0",
     "baseUrl": "src",
     "outDir": "./dist",
     "paths": {
