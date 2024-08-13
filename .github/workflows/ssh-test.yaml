@@ -1,0 +1,31 @@
+name: SSH Test
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: 'Environment'
+        options:
+          - dev
+          - test
+          - prod
+        required: true
+        default: 'test'
+
+jobs:
+  deploy-backend:
+    name: Deploy Docker Image
+    environment: ${{inputs.environment}}
+    runs-on: ubuntu-latest
+    env:
+      PRIVATE_KEY: ${{secrets.APP_SSH_KEY}}
+    steps:
+      - name: Deploy NodeJS Container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{vars.APP_SSH_HOST}}
+          username: ${{ vars.APP_SSH_USERNAME }}
+          key: ${{env.PRIVATE_KEY}} # Private key of the server
+          script_stop: true
+          script: |
+            echo "some contents" > action-file.txt
